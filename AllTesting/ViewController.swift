@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import Alamofire
+
 
 class ViewController: UIViewController {
 
@@ -20,6 +22,35 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
+    func fetchAllRooms(completion: ([RemoteRoom]?) -> Void) {
+        Alamofire.request(
+            .GET,
+            "http://localhost:5984/rooms/_all_docs",
+            parameters: ["include_docs": "true"],
+            encoding: .URL)
+            .validate()
+            .responseJSON { (response) -> Void in
+                guard response.result.isSuccess else {
+                    print("Error while fetching remote rooms: \(response.result.error)")
+                    completion(nil)
+                    return
+                }
+                
+                guard let value = response.result.value as? [String: AnyObject],
+                    rows = value["rows"] as? [[String: AnyObject]] else {
+                        print("Malformed data received from fetchAllRooms service")
+                        completion(nil)
+                        return
+                }
+                
+                var rooms = [RemoteRoom]()
+                for roomDict in rows {
+                    rooms.append(RemoteRoom(jsonData: roomDict))
+                }
+                
+                completion(rooms)
+        }
+    }
 
 }
 
